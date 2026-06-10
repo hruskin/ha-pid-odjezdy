@@ -27,7 +27,7 @@ Zkopíruj `custom_components/pid_odjezdy/` do `config/custom_components/` a rest
 
 1. Zařízení a služby → **Přidat integraci** → *PID Odjezdy*
 2. Vlož **Golemio API token** — zdarma na [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys)
-3. Zadej **přesný název zastávky PID** (např. `Křížkový Újezdec`)
+3. Vyber zastávku z **nabídky okolních zastávek** (podle polohy domova v HA, okruh 3 km, seřazeno podle vzdálenosti) — nebo napiš přesný název zastávky PID ručně (např. `Křížkový Újezdec`)
 
 V **Možnostech** integrace pak lze měnit: počet spojů (výchozí 6), interval aktualizace (výchozí 60 s), časové okno dopředu, zobrazení zrušených spojů a filtry linek/nástupišť.
 
@@ -55,7 +55,7 @@ air_conditioned: true
 wheelchair_accessible: true
 canceled: false
 at_stop: false           # vůz stojí na zastávce
-last_stop: "Praha, Budějovická"
+last_stop: "Křížkový Újezdec"  # poslední zaznamenaná poloha vozidla
 train_number: null       # u vlaků např. "S9"
 display: "15:06(+2)"     # hotový text pro tabuli
 ```

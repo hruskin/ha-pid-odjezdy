@@ -1,7 +1,7 @@
 {
   "domain": "pid_odjezdy",
   "name": "PID Odjezdy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/hruskin/ha-pid-odjezdy",
   "issue_tracker": "https://github.com/hruskin/ha-pid-odjezdy/issues",
   "codeowners": ["@hruskin"],

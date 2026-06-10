@@ -7,6 +7,11 @@ DOMAIN = "pid_odjezdy"
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 API_URL = "https://api.golemio.cz/v2/pid/departureboards"
+STOPS_URL = "https://api.golemio.cz/v2/gtfs/stops"
+
+# Hledání okolních zastávek v config flow
+NEARBY_RANGE_M = 3000
+NEARBY_MAX_OPTIONS = 30
 
 CONF_API_TOKEN = "api_token"
 CONF_STOP_NAME = "stop_name"

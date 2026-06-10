@@ -4,11 +4,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from math import asin, cos, radians, sin, sqrt
 from typing import Any
 
 import aiohttp
 
-from .const import API_URL, MINUTES_BEFORE, ROUTE_TYPES
+from .const import API_URL, MINUTES_BEFORE, ROUTE_TYPES, STOPS_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ class Departure:
         elif self.delay_min < 0:
             out += f"({self.delay_min})"
         return out
+
+
+@dataclass
+class NearbyStop:
+    name: str
+    distance_m: int
 
 
 @dataclass
@@ -117,10 +124,71 @@ def _parse_departure(item: dict[str, Any]) -> Departure:
     )
 
 
+def _distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
+    """Haversine — vzdálenost dvou souřadnic v metrech."""
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return int(2 * 6371000 * asin(sqrt(a)))
+
+
 class GolemioClient:
     def __init__(self, session: aiohttp.ClientSession, api_token: str) -> None:
         self._session = session
         self._token = api_token
+
+    async def _get_json(self, url: str, params: dict[str, Any]) -> Any:
+        headers = {"X-Access-Token": self._token}
+        try:
+            async with self._session.get(
+                url, params=params, headers=headers,
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as resp:
+                if resp.status in (401, 403):
+                    raise GolemioAuthError(f"HTTP {resp.status} — neplatný token")
+                if resp.status == 404:
+                    raise GolemioStopNotFound(str(params))
+                if resp.status != 200:
+                    body = (await resp.text())[:200]
+                    raise GolemioError(f"HTTP {resp.status}: {body}")
+                return await resp.json()
+        except aiohttp.ClientError as err:
+            raise GolemioError(f"Chyba spojení: {err}") from err
+
+    async def find_nearby_stops(
+        self, lat: float, lon: float, *, range_m: int, max_results: int
+    ) -> list[NearbyStop]:
+        """Zastávky PID kolem souřadnic, seřazené podle vzdálenosti.
+
+        Sloupky téže zastávky (nástupiště A/B/…) jsou sloučené pod jedním
+        názvem — departureboards stejně bere celou zastávku přes `names`.
+        Parametr `range` na straně Golemia vrací HTTP 500, okruh se proto
+        ořezává až tady z pole `distance` v odpovědi.
+        """
+        payload = await self._get_json(
+            STOPS_URL,
+            {"latlng": f"{lat},{lon}", "limit": 200},
+        )
+        nearest: dict[str, int] = {}
+        for feature in payload.get("features") or []:
+            props = feature.get("properties") or {}
+            name = props.get("stop_name")
+            coords = (feature.get("geometry") or {}).get("coordinates") or []
+            if not name:
+                continue
+            dist = props.get("distance")
+            if dist is None and len(coords) >= 2:
+                dist = _distance_m(lat, lon, coords[1], coords[0])
+            if dist is None:
+                continue
+            dist = int(dist)
+            if name not in nearest or dist < nearest[name]:
+                nearest[name] = dist
+        stops = [NearbyStop(name=n, distance_m=d) for n, d in nearest.items()]
+        stops.sort(key=lambda s: s.distance_m)
+        in_range = [s for s in stops if s.distance_m <= range_m]
+        # Bez zastávky v okruhu (samota, chalupa) nabídni aspoň nejbližší.
+        return (in_range or stops)[:max_results]
 
     async def fetch_board(
         self,
@@ -143,23 +211,7 @@ class GolemioClient:
             "skip": "canceled" if skip_canceled else "atStop",
             "preferredTimezone": "Europe/Prague",
         }
-        headers = {"X-Access-Token": self._token}
-
-        try:
-            async with self._session.get(
-                API_URL, params=params, headers=headers,
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
-                if resp.status in (401, 403):
-                    raise GolemioAuthError(f"HTTP {resp.status} — neplatný token")
-                if resp.status == 404:
-                    raise GolemioStopNotFound(stop_name)
-                if resp.status != 200:
-                    body = (await resp.text())[:200]
-                    raise GolemioError(f"HTTP {resp.status}: {body}")
-                payload = await resp.json()
-        except aiohttp.ClientError as err:
-            raise GolemioError(f"Chyba spojení: {err}") from err
+        payload = await self._get_json(API_URL, params)
 
         stops = payload.get("stops") or []
         if not stops:

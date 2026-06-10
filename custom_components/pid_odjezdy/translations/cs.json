@@ -3,10 +3,16 @@
     "step": {
       "user": {
         "title": "Odjezdová tabule PID",
-        "description": "Token zdarma získáš na [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys). Zadej přesný název zastávky PID, např. **Křížkový Újezdec**.",
+        "description": "Token zdarma získáš na [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys).",
         "data": {
-          "api_token": "Golemio API token",
-          "stop_name": "Název zastávky"
+          "api_token": "Golemio API token"
+        }
+      },
+      "stop": {
+        "title": "Výběr zastávky",
+        "description": "V okolí polohy domova v Home Assistantu jsem našel {count} zastávek PID. Vyber ze seznamu, nebo napiš přesný název zastávky (např. **Křížkový Újezdec**).",
+        "data": {
+          "stop_name": "Zastávka"
         }
       },
       "reauth_confirm": {

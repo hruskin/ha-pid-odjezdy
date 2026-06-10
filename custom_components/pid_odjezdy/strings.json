@@ -3,10 +3,16 @@
     "step": {
       "user": {
         "title": "PID departure board",
-        "description": "Get a free API token at [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys). Enter the exact PID stop name, e.g. **Křížkový Újezdec**.",
+        "description": "Get a free API token at [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys).",
         "data": {
-          "api_token": "Golemio API token",
-          "stop_name": "Stop name"
+          "api_token": "Golemio API token"
+        }
+      },
+      "stop": {
+        "title": "Pick a stop",
+        "description": "Found {count} PID stops near your Home Assistant home location. Pick one, or type the exact PID stop name (e.g. **Křížkový Újezdec**).",
+        "data": {
+          "stop_name": "Stop"
         }
       },
       "reauth_confirm": {

@@ -43,12 +43,15 @@ from .const import (
     MIN_DEPARTURES_COUNT,
     MIN_MINUTES_AFTER,
     MIN_SCAN_INTERVAL,
+    NEARBY_MAX_OPTIONS,
+    NEARBY_RANGE_M,
 )
 from .golemio_client import (
     GolemioAuthError,
     GolemioClient,
     GolemioError,
     GolemioStopNotFound,
+    NearbyStop,
 )
 
 
@@ -126,6 +129,10 @@ def _options_schema(current: dict[str, Any]) -> vol.Schema:
 class PidConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    def __init__(self) -> None:
+        self._token: str = ""
+        self._nearby: list[NearbyStop] = []
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -133,41 +140,89 @@ class PidConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             token = user_input[CONF_API_TOKEN].strip()
-            stop_name = user_input[CONF_STOP_NAME].strip()
-
-            await self.async_set_unique_id(slugify(stop_name))
-            self._abort_if_unique_id_configured()
-
             client = GolemioClient(async_get_clientsession(self.hass), token)
             try:
-                board = await client.fetch_board(
-                    stop_name, limit=1, minutes_after=60, skip_canceled=True
+                self._nearby = await client.find_nearby_stops(
+                    self.hass.config.latitude,
+                    self.hass.config.longitude,
+                    range_m=NEARBY_RANGE_M,
+                    max_results=NEARBY_MAX_OPTIONS,
                 )
             except GolemioAuthError:
                 errors[CONF_API_TOKEN] = "invalid_auth"
-            except GolemioStopNotFound:
-                errors[CONF_STOP_NAME] = "stop_not_found"
             except GolemioError:
                 errors["base"] = "cannot_connect"
             else:
-                return self.async_create_entry(
-                    title=board.stop_name or stop_name,
-                    data={
-                        CONF_API_TOKEN: token,
-                        CONF_STOP_NAME: stop_name,
-                    },
-                )
+                self._token = token
+                return await self.async_step_stop()
 
         schema = vol.Schema(
             {
                 vol.Required(CONF_API_TOKEN): TextSelector(
                     TextSelectorConfig(type=TextSelectorType.PASSWORD)
                 ),
-                vol.Required(CONF_STOP_NAME): str,
             }
         )
         return self.async_show_form(
             step_id="user", data_schema=schema, errors=errors
+        )
+
+    async def async_step_stop(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            stop_name = user_input[CONF_STOP_NAME].strip()
+
+            await self.async_set_unique_id(slugify(stop_name))
+            self._abort_if_unique_id_configured()
+
+            client = GolemioClient(
+                async_get_clientsession(self.hass), self._token
+            )
+            try:
+                board = await client.fetch_board(
+                    stop_name, limit=1, minutes_after=60, skip_canceled=True
+                )
+            except GolemioStopNotFound:
+                errors[CONF_STOP_NAME] = "stop_not_found"
+            except GolemioAuthError:
+                errors["base"] = "invalid_auth"
+            except GolemioError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_create_entry(
+                    title=board.stop_name or stop_name,
+                    data={
+                        CONF_API_TOKEN: self._token,
+                        CONF_STOP_NAME: stop_name,
+                    },
+                )
+
+        options = [
+            SelectOptionDict(
+                value=s.name, label=f"{s.name} ({s.distance_m} m)"
+            )
+            for s in self._nearby
+        ]
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STOP_NAME): SelectSelector(
+                    SelectSelectorConfig(
+                        options=options,
+                        mode=SelectSelectorMode.DROPDOWN,
+                        custom_value=True,
+                        sort=False,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="stop",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"count": str(len(self._nearby))},
         )
 
     async def async_step_reauth(
