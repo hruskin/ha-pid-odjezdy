@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Odjezdová tabule PID",
+        "description": "Token zdarma získáš na [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys). Zadej přesný název zastávky PID, např. **Křížkový Újezdec**.",
+        "data": {
+          "api_token": "Golemio API token",
+          "stop_name": "Název zastávky"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Obnova Golemio API tokenu",
+        "data": {
+          "api_token": "Golemio API token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Neplatný nebo expirovaný API token.",
+      "stop_not_found": "Zastávka s tímto názvem v PID neexistuje.",
+      "cannot_connect": "Nepodařilo se připojit ke Golemio API."
+    },
+    "abort": {
+      "already_configured": "Tato zastávka už je nastavená.",
+      "reauth_successful": "Token byl aktualizován."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nastavení odjezdové tabule",
+        "data": {
+          "departures_count": "Počet spojů",
+          "scan_interval": "Interval aktualizace",
+          "minutes_after": "Časové okno dopředu",
+          "canceled_mode": "Zrušené spoje",
+          "route_filter": "Filtr linek (např. 332, 339 — prázdné = vše)",
+          "platform_filter": "Filtr nástupišť (např. A, B — prázdné = vše)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "canceled_mode": {
+      "options": {
+        "skip": "Skrýt zrušené spoje",
+        "show": "Zobrazit zrušené spoje"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "board": { "name": "Odjezdy" },
+      "infotexts": { "name": "Výluky" }
+    },
+    "binary_sensor": {
+      "api": { "name": "API" }
+    }
+  }
+}

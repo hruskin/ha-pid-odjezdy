@@ -1,0 +1,57 @@
+name: Release
+
+# Spustí se při každém push na main, který upraví manifest.json.
+# Pokud verze v manifestu ještě nemá tag, vytvoří tag a publishne GitHub
+# Release s auto-generovanými release notes z commitů. HACS pak vidí
+# verzi jako vX.Y.Z místo SHA.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "custom_components/pid_odjezdy/manifest.json"
+  workflow_dispatch: {}  # umožní spustit i ručně
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # potřebujeme historii kvůli tagům
+
+      - name: Read manifest version
+        id: ver
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' custom_components/pid_odjezdy/manifest.json)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Neplatná verze v manifest.json: '$VERSION'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if tag already exists
+        id: tag_check
+        shell: bash
+        run: |
+          if git rev-parse "${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ steps.ver.outputs.tag }} už existuje — nic nedělám."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag + GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          make_latest: "true"

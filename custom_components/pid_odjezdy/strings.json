@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PID departure board",
+        "description": "Get a free API token at [api.golemio.cz/api-keys](https://api.golemio.cz/api-keys). Enter the exact PID stop name, e.g. **Křížkový Újezdec**.",
+        "data": {
+          "api_token": "Golemio API token",
+          "stop_name": "Stop name"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Renew Golemio API token",
+        "data": {
+          "api_token": "Golemio API token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid or expired API token.",
+      "stop_not_found": "No PID stop with this name was found.",
+      "cannot_connect": "Could not connect to the Golemio API."
+    },
+    "abort": {
+      "already_configured": "This stop is already configured.",
+      "reauth_successful": "Token updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Departure board settings",
+        "data": {
+          "departures_count": "Number of departures",
+          "scan_interval": "Update interval",
+          "minutes_after": "Look-ahead window",
+          "canceled_mode": "Canceled departures",
+          "route_filter": "Route filter (e.g. 332, 339 — empty = all)",
+          "platform_filter": "Platform filter (e.g. A, B — empty = all)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "canceled_mode": {
+      "options": {
+        "skip": "Hide canceled departures",
+        "show": "Show canceled departures"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "board": { "name": "Departures" },
+      "infotexts": { "name": "Disruptions" }
+    },
+    "binary_sensor": {
+      "api": { "name": "API" }
+    }
+  }
+}
